@@ -1,0 +1,138 @@
+URL: http://www.sitepoint.com/convert-html-to-pdf-with-dompdf/
+
+Getting Started
+
+Dompdf is available on GitHub and can be installed using Composer. Getting a Composer-based install up and running correctly is admittedly still a bit tricky, so I recommend just using Git to install Dompdf.
+
+The library requires PHP >= 5.0 with the mbstring and DOM extensions enabled. It also needs some fonts, which are generally available on most machines.
+
+Navigate to wherever you want to put the library and execute:
+
+git clone https://github.com/dompdf/dompdf.git
+git submodule init
+git submodule update
+With Dompdf downloaded, let’s write a short example that will generate a simple PDF.
+
+
+<?php
+set_include_path(get_include_path() . PATH_SEPARATOR . "/path/to/dompdf");
+ 
+require_once "dompdf_config.inc.php";
+ 
+$dompdf = new DOMPDF();
+ 
+$html = <<<'ENDHTML'
+<html>
+ <body>
+  <h1>Hello Dompdf</h1>
+ </body>
+</html>
+ENDHTML;
+ 
+$dompdf->load_html($html);
+$dompdf->render();
+ 
+$dompdf->stream("hello.pdf");
+To use the library in a project, we first pull in dompdf_config.inc.php which contains most of the Dompdf configuration. It also loads an autoloader and a custom configuration file in which we can override default configuration parameters.
+
+HTML markup is given as a string to the load_html() method. Alternatively, we can load markup from a file or URL using the load_html_file() method. It accepts a filename or the URL of a webpage as its argument.
+
+The render() method renders the HTML into PDF and we are ready to dump the PDF file. stream() sends the resulting PDF as an attachment to the browser. The stream() method has an optional second parameter, an array of options:
+
+Accept-Ranges – boolean, send “Accept-Ranges” header (false by default).
+Attachment – boolean, send “Content-Disposition: attachment” header forcing the browser to display a save prompt (true by default).
+compress – boolean, enable content compression (true by default).
+We’ve generated a very simple PDF here, but that’s not very practical. In reality we’ll often have requirements about paper size, page orientation, character encoding, etc. There are number of configuration options that we can set to make Dompdf more suitable for our real-world needs. All of them are listed and explained in dompdf_config.inc.php which sets them to their default values. You can change these values by updating the the custom configuration file dompdf_config.custom.inc.php. Some of the important settings are:
+
+DOMPDF_DEFAULT_PAPER_SIZE – sets the default paper size for the PDF document. Supported paper sizes can be found in include/cpdf_adapter.cls.php (the default value is “letter”).
+DOMPDF_TEMP_DIR – specifies the temporary directory used by Dompdf. Make sure this location is writable by the web server account.
+DOMPDF_UNICODE_ENABLED – sets whether the PDF uses Unicode fonts (the default is true).
+DOMPDF_ENABLE_REMOTE – enables the inclusion of images or CSS styles from remote sites (default is false).
+DEBUG_LAYOUT – whether to render a box around each HTML block in the PDF file which is useful for debugging the layout (default is false).
+Advanced Usage
+
+Now let’s talk about some advanced uses of Dompdf. Perhaps we want to save the generated PDF document to disk instead of sending it to the browser. Here’s how:
+
+
+<?php
+$dompdf = new DOMPDF();
+$dompdf->load_html($html);
+$dompdf->render();
+ 
+$output = $dompdf->output();
+file_put_contents("/path/to/file.pdf", $output);
+Instead of calling stream() like in the previous example, we use output() which returns the PDF as a string. It too accepts an optional options array, but the only option available is compress (the default is true).
+
+Dompdf also allows us to add a header or footer to the generated PDF by embedding a PHP script in the HTML that it renders. But because processing arbitrary code can pose a security risk if you’re not careful, the configuration value that controls this functionality is off by default. We need to first set the DOMPDF_ENABLE_PHP option true.
+
+Once we’ve enabled inline PHP execution, the PDF object will be made available within the script, which we can use to manipulate the page. We can add text, lines, images, rectangles, etc. anywhere inside the page.
+
+
+$html = <<<'ENDHTML'
+<html>
+ <body>
+  <script type="text/php">
+if (isset($pdf)) {
+    // open the PDF object - all drawing commands will
+    // now go to the object instead of the current page
+    $footer = $pdf->open_object();
+ 
+    // get height and width of page
+    $w = $pdf->get_width();
+    $h = $pdf->get_height();
+ 
+    // get font
+    $font = Font_Metrics::get_font("helvetica", "normal");
+    $txtHeight = Font_Metrics::get_font_height($font, 8);
+ 
+    // draw a line along the bottom
+    $y = $h - 2 * $txtHeight - 24;
+    $color = array(0, 0, 0);
+    $pdf->line(16, $y, $w - 16, $y, $color, 1);
+     
+    // set page number on the left side
+    $pdf->page_text(16, $y, "Page: {PAGE_NUM} of {PAGE_COUNT}", $font, 8, $color);
+    // set additional text
+    $text = "Dompdf is awesome";
+    $width = Font_Metrics::get_text_width($text, $font, 8);
+    $pdf->text($w - $width - 16, $y, $text, $font, 8);
+ 
+    // close the object (stop capture)
+    $pdf->close_object();
+ 
+    // add the object to every page (can also specify
+    // "odd" or "even")
+    $pdf->add_object($footer, "all");
+}
+  </script>
+  <h1>Hello Dompdf</h1>
+ </body>
+</html>
+ENDHTML;
+The script is embedded directly into the HTML markup, and first opens an object so we can affect the rendering. All drawing will be recorded into that object and we can add this object to all or selected pages (though there are limitations).
+
+Next we fetch the actual width and height of the page to calculate the coordinates of the footer we intend to add. Also, we need to provide a font object while we add text contents. Font_Metrics::get_font() lets us to create the object we need. We also take the height of the given font at its font size using get_font_height()to calculate positioning for the footer’s contents. The method get_font_width() returns the width of our text for the given font and font size which is also used in our calculations.
+
+The line() method draws a line from point (X1,Y1) to (X2,X2). Notice that the color value we provided is not an actual RGB value. The underlying PDF class requires values between 0 and 1 and so we convert the RGB values into these new values. To get a better approximation, you can divide it by 255.
+
+We add the page number for each page using the page_text() method, which accepts an X and Y position, the text to be added, a font object, font size, and color. Dompdf automatically replaces the values for {PAGE_NUM} and {PAGE_COUNT} in each page, and makes $pdf available to us.
+
+When the PDF renders, the footer section will look like this:
+
+dompdf-01
+
+It’s possible to avoid using inline PHP and achieve the same effect directly from PHP, like so:
+
+
+<?php
+$dompdf = new DOMPDF();
+$dompdf->set_paper("A4");
+ 
+// load the html content
+$dompdf->load_html($html);
+$dompdf->render();
+$canvas = $dompdf->get_canvas();
+$font = Font_Metrics::get_font("helvetica", "bold");
+$canvas->page_text(16, 800, "Page: {PAGE_NUM} of {PAGE_COUNT}", $font, 8, array(0,0,0));
+$dompdf->stream("sample.pdf",array("Attachment"=>0));
+Note that we place the code after calling $dompdf->render() because we are essentially modifying the rendered PDF.
