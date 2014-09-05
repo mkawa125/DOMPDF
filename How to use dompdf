@@ -1,0 +1,85 @@
+URL
+http://kyokasuigetsu25.wordpress.com/2011/07/14/how-to-use-dompdf-with-css/
+
+How to use dompdf
+Posted on February 9, 2011 by Wern Ancheta
+In this guide I’m going to show you how you can generate pdf files in php. Pdf files can be use to store reports for easy printing. This is useful when creating a system which needs to generate reports.
+
+In the time of writing of this guide, I’m using dompdf. It’s an html to pdf converter. Its easy to generate pdf files using php and dompdf. Since php, generates html files when parse. And dompdf, converts html files to pdf.
+
+ 
+
+Requirements
+
+WAMP
+DomPdf
+Text Editor
+ 
+
+Let’s get started. First you have to extract the zip file that you have downloaded from code.google.com where dompdf is hosted.
+
+It should look like this when extracted:
+
+image
+
+Next thing that you have to do is to create a new php file. This file would call dompdf, and it will generate a pdf file from an html file.
+
+Place this piece of code in the beginning of your file:
+
+<?php
+require_once("lib/dompdf/dompdf_config.inc.php");
+?>
+I had trouble using absolute urls. So you might as well use a relative url when including the configuration file of dompdf. Like the one above.
+
+Then declare a new DomPdf object. Always remember that there should only be one object. And it should be declared before you start using codes which are associated with dompdf. If you want to create 2 or more objects, then be sure to name it differently:
+
+$dompdf = new DOMPDF();
+The following example is taken from the wiki of dompdf, check it out for more details about dompdf.
+
+$html =
+  '<html><body>'.
+  '<p>Put your html here, or generate it with your favourite '.
+  'templating system.</p>'.
+  '</body></html>';
+ 
+$dompdf = new DOMPDF(); 
+$dompdf->load_html($html);
+$dompdf->render();
+$dompdf->stream("sample.pdf");
+The code is self explanatory since the function names actually say what they will do. That particular example will generate a pdf file named sample.pdf. And it gets the data to be placed in that pdf from the ‘$html’ php variable.
+
+In this second example, we will be using a php function ‘ob_start’. Which will generate html files. But not just generate, it will also save it to a directory. And that directory can be used to generate pdf files from html files which are saved on the hard disk.
+
+Begin by,  calling the ob_start function. Remember that you must place this directly  before the codes which when parsed produces an html file.
+
+<?php ob_start(); ?>
+<html>
+<table border="1">
+<tr>
+<th>Header</th>
+</tr>
+<tr>
+<td>Table Definition</td>
+</tr>
+</table>
+</html>
+Examine the example carefully. You must remember that your code should comply with html standards. Because if not, dompdf won’t work and you’ll run into some errors. That’s what happened to me when I first used dompdf. Thankfully I was able to figure things out. That’s why I’m here talking about how to use it. Along with some tips to remember so that you won’t run into the same errors that I got. The html validator will be handy. So try to use it.
+
+Next thing that you need to do is to actually put the contents that the function has gathered into an html file:
+
+<?php
+file_put_contents('../tmp/customerpay.html', ob_get_contents());
+?>
+All you have to do now is to actually call dompdf to generate pdf from the html file that you have just created:
+
+<?php
+$ofilename=$_GET['filename'];
+ 
+    $filename='../tmp/customerpay.html';
+    $dompdf->load_html(file_get_contents($filename));
+    $dompdf->render();
+    $dompdf->stream($ofilename.".pdf");
+?>
+I’ll leave to you the challenge of supplying the filename for the pdf file which will be generated. If you don’t want the pdf files to have the same filename, then use your creativity on what to put on that $ofilename variable.
+
+ 
