@@ -1,0 +1,24 @@
+1- In <style> Tag add
+
+ @font-face {
+    font-family: new_font;
+    src: url("OpenSans-Bold.ttf");
+}
+
+2- Set elemt font family:
+
+h1{font-family: new_font ;}  or h1{font-family: new_font !important ;}
+
+3 </style>
+
+<head>
+<style type="text/css">
+  @font-face {
+    font-family: new_font;
+    src: url("OpenSans-Bold.ttf");
+   }
+  h1{font-family: new_font;}
+</style>
+</head>
+
+* you may neeed to pass !important in font family property setting for forcing new font!
